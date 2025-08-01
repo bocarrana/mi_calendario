@@ -182,18 +182,18 @@
             if (dayInGuiñoteYear === 1) {
                 result.dayType = 'aniversario';
                 if (yearIndex === 0) {
-                    result.dayName = "la Fundación de la Asociación Aragonesa de Guiñote";
+                    result.dayName = "de la Fundación de la Asociación Aragonesa de Guiñote";
                 } else if (yearIndex > 0) {
                     result.dayName = `del ${toRoman(yearIndex)} Aniversario del Guiñote`;
                 } else {
-                    result.dayName = `el Año ${Math.abs(yearIndex)} antes de la Asociación`;
+                    result.dayName = `del Año ${Math.abs(yearIndex)} antes de la Asociación`;
                 }
                 return result;
             }
             
             if (isLeap && dayInGuiñoteYear === 366) {
                 result.dayType = 'coto';
-                result.dayName = 'el Coto';
+                result.dayName = 'del Coto';
                 return result;
             }
 
@@ -209,7 +209,7 @@
 
             if (result.dayInReino === 91) {
                 result.dayType = 'veinte';
-                result.dayName = `las Veinte en ${result.reinoSuit.charAt(0).toUpperCase() + result.reinoSuit.slice(1)}`;
+                result.dayName = `de las Veinte en ${result.reinoSuit.charAt(0).toUpperCase() + result.reinoSuit.slice(1)}`;
             } else {
                 result.dayType = 'permutacion';
                 const dayInPermutation = result.dayInReino;
