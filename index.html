@@ -96,7 +96,7 @@
         <button id="todayBtn" class="action-button">Hoy</button>
     </div>
 
-    <canvas id="guiñoteDashboard" width="1000" height="650"></canvas>
+    <canvas id="guiñoteDashboard" width="1000" height="700"></canvas>
 
     <script>
         // --- CONFIGURACIÓN Y LÓGICA DEL CALENDARIO ---
@@ -154,28 +154,27 @@
             if (dayInGuiñoteYear === 1) {
                 result.dayType = 'cuarenta';
                 result.dayName = `Día de las Cuarenta en ${result.yearInfo.suit.charAt(0).toUpperCase() + result.yearInfo.suit.slice(1)}`;
-                // MODIFICACIÓN: Se asigna un índice de estación para el día de las cuarenta
-                result.seasonIndex = 3; // Otoño (la estación anterior al inicio del ciclo)
+                result.seasonIndex = 3; 
                 return result;
             }
             
             if (isLeap && dayInGuiñoteYear === 366) {
                 result.dayType = 'coto';
                 result.dayName = 'Día del Coto';
-                result.seasonIndex = 3; // Otoño (la última estación)
+                result.seasonIndex = 3;
                 return result;
             }
 
             const dayAfterCuarenta = dayInGuiñoteYear - 1;
             const reinoIndex = Math.floor((dayAfterCuarenta - 1) / 91);
-            result.seasonIndex = reinoIndex; // Guardamos el índice de la estación
+            result.seasonIndex = reinoIndex;
             
             const startSuitIndex = SUIT_ORDER.indexOf(result.yearInfo.suit);
             const reinoSuitOrder = [
-                SUIT_ORDER[(startSuitIndex + 1) % 4], // Estación 0 (Invierno)
-                SUIT_ORDER[(startSuitIndex + 2) % 4], // Estación 1 (Primavera)
-                SUIT_ORDER[(startSuitIndex + 3) % 4], // Estación 2 (Verano)
-                SUIT_ORDER[(startSuitIndex + 0) % 4]  // Estación 3 (Otoño)
+                SUIT_ORDER[(startSuitIndex + 1) % 4],
+                SUIT_ORDER[(startSuitIndex + 2) % 4],
+                SUIT_ORDER[(startSuitIndex + 3) % 4],
+                SUIT_ORDER[(startSuitIndex + 0) % 4]
             ];
             result.reinoSuit = reinoSuitOrder[reinoIndex];
             result.dayInReino = ((dayAfterCuarenta - 1) % 91) + 1;
@@ -242,23 +241,27 @@
                     y: Math.random() * canvas.height,
                     vx: (Math.random() - 0.5) * 0.5,
                     vy: (Math.random() - 0.5) * 0.5,
-                    radius: Math.random() * 3 + 2, // Un poco más grandes
+                    radius: Math.random() * 3 + 2,
                     angle: Math.random() * Math.PI * 2
                 });
             }
 
+            // MODIFICACIÓN: Se añade el logo a la carga de imágenes
             const cardImages = {};
-            const promises = YEAR_SEQUENCE.map(card => {
+            const allImageSources = YEAR_SEQUENCE.map(card => card.imageSrc);
+            SUIT_ORDER.forEach(suit => allImageSources.push(`images/cante_${suit}.png`));
+            allImageSources.push('images/logo.png'); // Añadimos el logo
+
+            const promises = allImageSources.map(src => {
                 return new Promise((resolve) => {
                     const img = new Image();
-                    img.src = card.imageSrc;
-                    img.onload = () => { cardImages[card.imageSrc] = img; resolve(); };
-                    img.onerror = () => { console.error(`Error al cargar la imagen local: ${card.imageSrc}`); resolve(); }
+                    img.src = src;
+                    img.onload = () => { cardImages[src] = img; resolve(); };
+                    img.onerror = () => { console.error(`Error al cargar la imagen local: ${src}`); resolve(); }
                 });
             });
             await Promise.all(promises);
 
-            // --- MODIFICACIÓN: Funciones para dibujar partículas estacionales ---
             function drawSnowflake(p) {
                 ctx.save();
                 ctx.translate(p.x, p.y);
@@ -314,7 +317,6 @@
                 ctx.stroke();
                 ctx.restore();
             }
-            // --- FIN DE MODIFICACIÓN ---
 
             function drawComicText(text, x, y, font, fillColor) {
                 ctx.font = font;
@@ -370,112 +372,116 @@
                 const now = new Date();
                 const guiñoteData = getGuiñoteDate(selectedDate);
 
-                // --- MODIFICACIÓN: Lógica para dibujar partículas estacionales ---
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
                 ctx.lineWidth = 1.5;
                 particles.forEach(p => {
                     p.x += p.vx;
                     p.y += p.vy;
-                    p.angle += p.vx * 0.05; // Rotación
+                    p.angle += p.vx * 0.05;
                     if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
                     if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
 
                     switch (guiñoteData.seasonIndex) {
-                        case 0: // Invierno
-                            drawSnowflake(p);
-                            break;
-                        case 1: // Primavera
-                            drawFlower(p);
-                            break;
-                        case 2: // Verano
-                            drawSun(p);
-                            break;
-                        case 3: // Otoño
-                            drawLeaf(p);
-                            break;
-                        default: // Por si acaso
+                        case 0: drawSnowflake(p); break;
+                        case 1: drawFlower(p); break;
+                        case 2: drawSun(p); break;
+                        case 3: drawLeaf(p); break;
+                        default:
                             ctx.beginPath();
                             ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                             ctx.fill();
                     }
                 });
-                // --- FIN DE MODIFICACIÓN ---
 
-                drawRoundedRect(25, 25, 460, 600, 20, COLORS.panel);
-                drawRoundedRect(515, 25, 460, 600, 20, COLORS.panel);
+                // MODIFICACIÓN: Se mueven los paneles hacia abajo para dejar espacio al logo
+                const panelY = 100;
+                drawRoundedRect(25, panelY, 460, 575, 20, COLORS.panel);
+                drawRoundedRect(515, panelY, 460, 575, 20, COLORS.panel);
+
+                // MODIFICACIÓN: Se dibuja el logo en la parte superior central
+                drawCard('images/logo.png', canvas.width / 2 - 50, 15, 100, 100);
 
                 const leftColX = 255;
                 ctx.textAlign = 'center';
                 
                 ctx.font = "bold 28px 'Comic Neue'";
                 ctx.fillStyle = COLORS.text;
-                ctx.fillText('Estamos en el año del', leftColX, 80);
+                ctx.fillText('Estamos en el año del', leftColX, panelY + 50);
                 
-                drawComicText(guiñoteData.yearInfo.name, leftColX, 140, "50px Bangers", COLORS.neonPink);
+                drawComicText(guiñoteData.yearInfo.name, leftColX, panelY + 110, "50px Bangers", COLORS.neonPink);
                 
                 const cardYOffset = Math.sin(animationFrame * 0.02) * 10;
-                drawCard(guiñoteData.yearInfo.imageSrc, leftColX - 100, 170, 200, 308, cardYOffset);
+                drawCard(guiñoteData.yearInfo.imageSrc, leftColX - 100, panelY + 140, 200, 308, cardYOffset);
                 
                 ctx.font = "bold 22px 'Comic Neue'";
                 ctx.fillStyle = COLORS.neonBlue;
                 const periodoText = `Periodo de la baraja ${guiñoteData.periodo > 0 ? '+' : ''}${guiñoteData.periodo}`;
-                ctx.fillText(periodoText, leftColX, 515);
+                ctx.fillText(periodoText, leftColX, panelY + 485);
 
                 ctx.font = "18px 'Comic Neue'";
                 ctx.fillStyle = COLORS.text;
-                ctx.fillText('Progreso Anual', leftColX, 550);
+                ctx.fillText('Progreso Anual', leftColX, panelY + 520);
                 
                 const yearProgress = guiñoteData.dayInGuiñoteYear / guiñoteData.totalDaysInYear;
-                drawRoundedRect(leftColX - 150, 570, 300, 20, 10, 'rgba(0,0,0,0.3)');
-                drawRoundedRect(leftColX - 150, 570, 300 * yearProgress, 20, 10, COLORS.neonPink);
+                drawRoundedRect(leftColX - 150, panelY + 540, 300, 20, 10, 'rgba(0,0,0,0.3)');
+                drawRoundedRect(leftColX - 150, panelY + 540, 300 * yearProgress, 20, 10, COLORS.neonPink);
                 
                 ctx.font = "bold 20px 'Comic Neue'";
                 ctx.fillStyle = '#fff';
-                ctx.fillText(`${(yearProgress * 100).toFixed(0)}%`, leftColX, 587);
+                ctx.fillText(`${(yearProgress * 100).toFixed(0)}%`, leftColX, panelY + 557);
 
                 const rightColX = 745;
                 
                 ctx.font = "bold 28px 'Comic Neue'";
                 ctx.fillStyle = COLORS.text;
-                ctx.fillText('Fecha Seleccionada', rightColX, 80);
+                ctx.fillText('Fecha Seleccionada', rightColX, panelY + 50);
                 
                 ctx.font = "22px 'Comic Neue'";
                 ctx.fillStyle = COLORS.neonBlue;
-                ctx.fillText(selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), rightColX, 115);
+                ctx.fillText(selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), rightColX, panelY + 85);
                 
                 ctx.font = "bold 40px 'Courier New', monospace";
                 ctx.fillStyle = COLORS.text;
-                ctx.fillText(now.toLocaleTimeString('es-ES'), rightColX, 165);
+                ctx.fillText(now.toLocaleTimeString('es-ES'), rightColX, panelY + 135);
                 
                 ctx.strokeStyle = 'rgba(255,255,255,0.1)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(550, 200);
-                ctx.lineTo(950, 200);
+                ctx.moveTo(550, panelY + 170);
+                ctx.lineTo(950, panelY + 170);
                 ctx.stroke();
 
                 ctx.font = "bold 28px 'Comic Neue'";
                 ctx.fillStyle = COLORS.text;
-                ctx.fillText('Hoy es el día', rightColX, 240);
+                ctx.fillText('Hoy es el día', rightColX, panelY + 210);
 
-                drawComicText(guiñoteData.dayName, rightColX, 300, "40px Bangers", COLORS.neonPink);
+                drawComicText(guiñoteData.dayName, rightColX, panelY + 270, "40px Bangers", COLORS.neonPink);
 
                 if (guiñoteData.dayType === 'permutacion') {
                     const card1ImgSrc = `images/${guiñoteData.card1.suit}_${guiñoteData.card1.number}.png`;
                     const card2ImgSrc = `images/${guiñoteData.card2.suit}_${guiñoteData.card2.number}.png`;
-                    drawCard(card1ImgSrc, rightColX - 150, 330, 120, 185, cardYOffset);
-                    drawCard(card2ImgSrc, rightColX + 30, 330, 120, 185, cardYOffset);
-                } else {
-                    const suitSymbol = { copas: '🏆', oros: '💰', espadas: '⚔️', bastos: '🌿'}[guiñoteData.reinoSuit || guiñoteData.yearInfo.suit];
-                    const symbolToDraw = guiñoteData.dayType === 'coto' ? '🎲' : suitSymbol;
-                    drawComicText(symbolToDraw, rightColX, 450, "120px 'Comic Neue'", COLORS.neonPink);
+                    drawCard(card1ImgSrc, rightColX - 150, panelY + 300, 120, 185, cardYOffset);
+                    drawCard(card2ImgSrc, rightColX + 30, panelY + 300, 120, 185, cardYOffset);
+                } else if (guiñoteData.dayType === 'cuarenta') {
+                    // MODIFICACIÓN: Se muestra el logo en el día de las cuarenta
+                    drawCard('images/logo.png', rightColX - 100, panelY + 300, 200, 200, cardYOffset);
+                } else if (guiñoteData.dayType === 'veinte') {
+                    const suit = guiñoteData.reinoSuit;
+                    const canteImgSrc = `images/cante_${suit}.png`;
+                    drawCard(canteImgSrc, rightColX - 100, panelY + 300, 200, 308, cardYOffset);
+                } else { // Día del Coto
+                    drawComicText('🎲', rightColX, panelY + 420, "120px 'Comic Neue'", COLORS.neonPink);
                 }
                 
                 if (guiñoteData.reinoSuit) {
                     ctx.font = "bold 22px 'Comic Neue'";
                     ctx.fillStyle = COLORS.neonBlue;
-                    ctx.fillText(`Estamos en la estación de ${guiñoteData.reinoSuit.charAt(0).toUpperCase() + guiñoteData.reinoSuit.slice(1)}`, rightColX, 560);
+                    ctx.fillText(`Estamos en la estación de ${guiñoteData.reinoSuit.charAt(0).toUpperCase() + guiñoteData.reinoSuit.slice(1)}`, rightColX, panelY + 520);
+
+                    ctx.font = "bold 20px 'Comic Neue'";
+                    ctx.fillStyle = COLORS.text;
+                    ctx.fillText(`(Día ${guiñoteData.dayInReino} de 91)`, rightColX, panelY + 550);
                 }
 
                 requestAnimationFrame(draw);
