@@ -169,18 +169,18 @@
             const guiñoteYearStartDate = new Date(START_DATE.getFullYear() + yearIndex, START_DATE.getMonth(), START_DATE.getDate());
             const dayInGuiñoteYear = Math.floor((date - guiñoteYearStartDate) / msPerDay) + 1;
             
-            // CORRECCIÓN: La comprobación del año bisiesto debe hacerse sobre el año gregoriano que contiene el 29 de febrero.
-            // Un año de guiñote que empieza en 2020 contiene el 29/02/2020.
             const leapCheckYear = guiñoteYearStartDate.getFullYear();
             const isLeap = (leapCheckYear % 4 === 0 && leapCheckYear % 100 !== 0) || (leapCheckYear % 400 === 0);
             const totalDaysInYear = isLeap ? 366 : 365;
             result.dayInGuiñoteYear = dayInGuiñoteYear;
             result.totalDaysInYear = totalDaysInYear;
 
-            // Lógica para el día del aniversario
+            const dayAfterAniversario = dayInGuiñoteYear - 1;
+            const reinoIndex = Math.floor((dayAfterAniversario - 1) / 91);
+            result.seasonIndex = reinoIndex;
+
             if (dayInGuiñoteYear === 1) {
                 result.dayType = 'aniversario';
-                result.seasonIndex = 3;
                 if (yearIndex === 0) {
                     result.dayName = "la Fundación de la Asociación Aragonesa de Guiñote";
                 } else if (yearIndex > 0) {
@@ -191,18 +191,12 @@
                 return result;
             }
             
-            // Lógica para el día del coto
             if (isLeap && dayInGuiñoteYear === 366) {
                 result.dayType = 'coto';
                 result.dayName = 'el Coto';
-                result.seasonIndex = 3;
                 return result;
             }
 
-            const dayAfterAniversario = dayInGuiñoteYear - 1;
-            const reinoIndex = Math.floor((dayAfterAniversario - 1) / 91);
-            result.seasonIndex = reinoIndex;
-            
             const startSuitIndex = SUIT_ORDER.indexOf(result.yearInfo.suit);
             const reinoSuitOrder = [
                 SUIT_ORDER[(startSuitIndex + 1) % 4],
@@ -215,7 +209,6 @@
 
             if (result.dayInReino === 91) {
                 result.dayType = 'veinte';
-                // CORRECCIÓN: Se quita "Día de"
                 result.dayName = `las Veinte en ${result.reinoSuit.charAt(0).toUpperCase() + result.reinoSuit.slice(1)}`;
             } else {
                 result.dayType = 'permutacion';
@@ -458,13 +451,12 @@
                     drawCard(card1ImgSrc, rightColX - 150, 330, 120, 185, cardYOffset);
                     drawCard(card2ImgSrc, rightColX + 30, 330, 120, 185, cardYOffset);
                 } else if (guiñoteData.dayType === 'aniversario') {
-                    // CORRECCIÓN: Se muestra el logo en el día del aniversario
                     drawCard('images/logo.png', rightColX - 100, 330, 200, 200, cardYOffset);
                 } else if (guiñoteData.dayType === 'veinte') {
                     const suit = guiñoteData.reinoSuit;
                     const canteImgSrc = `images/cante_${suit}.png`;
-                    // CORRECCIÓN: Se ajusta el tamaño y posición de la imagen del cante
-                    drawCard(canteImgSrc, rightColX - 75, 340, 150, 231, cardYOffset);
+                    // CORRECCIÓN: Se sube la imagen del cante
+                    drawCard(canteImgSrc, rightColX - 75, 315, 150, 231, cardYOffset);
                 } else { // Día del Coto
                     drawComicText('🎲', rightColX, 450, "120px 'Comic Neue'", COLORS.neonPink);
                 }
