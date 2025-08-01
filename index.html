@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard del Calendario de Guiñote</title>
+    
+    <!-- Importamos fuentes estilo Comic y modernas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Estilos para la página y el canvas */
+        body {
+            background-color: #1a1a2e; /* Fondo azul marino muy oscuro */
+            color: #e3e3e3;
+            font-family: 'Comic Neue', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            font-family: 'Bangers', cursive;
+            font-size: 3em;
+            font-weight: 400;
+            color: #e0218a; /* Neón Rosa */
+            text-shadow: 0 0 10px rgba(224, 33, 138, 0.8), 3px 3px 0 #000;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        /* --- ESTILOS PARA EL SELECTOR DE FECHA Y BOTÓN --- */
+        .date-picker-container {
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .date-picker-container label {
+            font-family: 'Bangers', cursive;
+            font-size: 1.5em;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        input[type="date"] {
+            background-color: #16213e;
+            color: #e3e3e3;
+            border: 3px solid #e0218a;
+            border-radius: 10px;
+            padding: 8px;
+            font-family: 'Comic Neue', cursive;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        /* Estilo para los botones */
+        .action-button {
+            font-family: 'Bangers', cursive;
+            font-size: 1.2em;
+            color: #fff;
+            background-color: #e0218a;
+            border: 3px solid #000;
+            border-radius: 10px;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .action-button:hover {
+            transform: scale(1.05);
+        }
+        /* --- FIN DE NUEVOS ESTILOS --- */
+
+        canvas {
+            background-color: #16213e; /* Azul oscuro para el fondo del canvas */
+            border-radius: 20px; /* Bordes muy redondeados */
+            box-shadow: 0 0 25px rgba(224, 33, 138, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>Calendario de la Asociación Aragonesa de Guiñote</h1>
+    
+    <div class="date-picker-container">
+        <label for="datePicker">Elige una fecha:</label>
+        <input type="date" id="datePicker">
+        <button id="viewDateBtn" class="action-button">Ver Fecha</button>
+        <button id="todayBtn" class="action-button">Hoy</button>
+    </div>
+
+    <canvas id="guiñoteDashboard" width="1000" height="650"></canvas>
+
+    <script>
+        // --- CONFIGURACIÓN Y LÓGICA DEL CALENDARIO ---
+
+        const START_DATE = new Date('2015-01-24T00:00:00');
+        const SUIT_ORDER = ['bastos', 'espadas', 'copas', 'oros'];
+        const CARD_NUMBERS = [12, 11, 10, 7, 6, 5, 4, 3, 2, 1];
+        const CARD_NAMES = {
+            1: 'As', 2: 'Dos', 3: 'Tres', 4: 'Cuatro', 5: 'Cinco', 6: 'Seis', 7: 'Siete', 10: 'Sota', 11: 'Caballo', 12: 'Rey'
+        };
+
+        function generateYearSequence() {
+            const sequence = [];
+            SUIT_ORDER.forEach(suit => {
+                CARD_NUMBERS.forEach(num => {
+                    const cardName = `${CARD_NAMES[num]} de ${suit.charAt(0).toUpperCase() + suit.slice(1)}`;
+                    sequence.push({
+                        suit: suit,
+                        number: num,
+                        name: cardName,
+                        imageSrc: `images/${suit}_${num}.png`
+                    });
+                });
+            });
+            return sequence;
+        }
+
+        const YEAR_SEQUENCE = generateYearSequence();
+
+        function getGuiñoteDate(date) {
+            let result = {};
+            const msPerDay = 1000 * 60 * 60 * 24;
+            
+            const yearsDiff = date.getFullYear() - START_DATE.getFullYear();
+            let yearIndex = yearsDiff;
+            if (date.getMonth() < START_DATE.getMonth() || (date.getMonth() === START_DATE.getMonth() && date.getDate() < START_DATE.getDate())) {
+                yearIndex--;
+            }
+
+            const periodo = Math.floor(yearIndex / 40);
+            result.periodo = periodo;
+
+            const cardIndex = ((yearIndex % 40) + 40) % 40;
+            result.yearInfo = YEAR_SEQUENCE[cardIndex];
+            
+            const guiñoteYearStartDate = new Date(START_DATE.getFullYear() + yearIndex, START_DATE.getMonth(), START_DATE.getDate());
+            const dayInGuiñoteYear = Math.floor((date - guiñoteYearStartDate) / msPerDay) + 1;
+            
+            const guiñoteCalYear = guiñoteYearStartDate.getFullYear();
+            const isLeap = (guiñoteCalYear % 4 === 0 && guiñoteCalYear % 100 !== 0) || (guiñoteCalYear % 400 === 0);
+            const totalDaysInYear = isLeap ? 366 : 365;
+            result.dayInGuiñoteYear = dayInGuiñoteYear;
+            result.totalDaysInYear = totalDaysInYear;
+
+            if (dayInGuiñoteYear === 1) {
+                result.dayType = 'cuarenta';
+                result.dayName = `Día de las Cuarenta en ${result.yearInfo.suit.charAt(0).toUpperCase() + result.yearInfo.suit.slice(1)}`;
+                // MODIFICACIÓN: Se asigna un índice de estación para el día de las cuarenta
+                result.seasonIndex = 3; // Otoño (la estación anterior al inicio del ciclo)
+                return result;
+            }
+            
+            if (isLeap && dayInGuiñoteYear === 366) {
+                result.dayType = 'coto';
+                result.dayName = 'Día del Coto';
+                result.seasonIndex = 3; // Otoño (la última estación)
+                return result;
+            }
+
+            const dayAfterCuarenta = dayInGuiñoteYear - 1;
+            const reinoIndex = Math.floor((dayAfterCuarenta - 1) / 91);
+            result.seasonIndex = reinoIndex; // Guardamos el índice de la estación
+            
+            const startSuitIndex = SUIT_ORDER.indexOf(result.yearInfo.suit);
+            const reinoSuitOrder = [
+                SUIT_ORDER[(startSuitIndex + 1) % 4], // Estación 0 (Invierno)
+                SUIT_ORDER[(startSuitIndex + 2) % 4], // Estación 1 (Primavera)
+                SUIT_ORDER[(startSuitIndex + 3) % 4], // Estación 2 (Verano)
+                SUIT_ORDER[(startSuitIndex + 0) % 4]  // Estación 3 (Otoño)
+            ];
+            result.reinoSuit = reinoSuitOrder[reinoIndex];
+            result.dayInReino = ((dayAfterCuarenta - 1) % 91) + 1;
+
+            if (result.dayInReino === 91) {
+                result.dayType = 'veinte';
+                result.dayName = `Día de las Veinte en ${result.reinoSuit.charAt(0).toUpperCase() + result.reinoSuit.slice(1)}`;
+            } else {
+                result.dayType = 'permutacion';
+                const dayInPermutation = result.dayInReino;
+                const card1IndexInSuit = Math.floor((dayInPermutation - 1) / 9);
+                const card2IndexInSuit = (dayInPermutation - 1) % 9;
+                const orderedCardNumbers = CARD_NUMBERS.slice().reverse();
+                const card1Number = orderedCardNumbers[card1IndexInSuit];
+                let remainingCards = orderedCardNumbers.filter(n => n !== card1Number);
+                const card2Number = remainingCards[card2IndexInSuit];
+                result.card1 = { suit: result.reinoSuit, number: card1Number, name: CARD_NAMES[card1Number] };
+                result.card2 = { suit: result.reinoSuit, number: card2Number, name: CARD_NAMES[card2Number] };
+                result.dayName = `${result.card1.name} - ${result.card2.name} de ${result.reinoSuit.charAt(0).toUpperCase() + result.reinoSuit.slice(1)}`;
+            }
+            return result;
+        }
+
+        // --- LÓGICA DEL CANVAS (NUEVO DISEÑO COMIC NEÓN ANIMADO) ---
+
+        window.onload = async () => {
+            const canvas = document.getElementById('guiñoteDashboard');
+            const ctx = canvas.getContext('2d');
+            let animationFrame = 0;
+
+            const datePicker = document.getElementById('datePicker');
+            const viewDateBtn = document.getElementById('viewDateBtn');
+            const todayBtn = document.getElementById('todayBtn');
+            let selectedDate = new Date(); 
+            
+            datePicker.value = selectedDate.toISOString().split('T')[0];
+
+            viewDateBtn.addEventListener('click', () => {
+                if (datePicker.value) {
+                    selectedDate = new Date(datePicker.value + 'T00:00:00');
+                }
+            });
+
+            todayBtn.addEventListener('click', () => {
+                selectedDate = new Date();
+                datePicker.value = selectedDate.toISOString().split('T')[0];
+            });
+
+            const COLORS = {
+                bg: '#16213e',
+                text: '#e3e3e3',
+                neonPink: '#e0218a',
+                neonBlue: '#00e5ff', 
+                glowPink: 'rgba(224, 33, 138, 0.7)',
+                panel: 'rgba(255, 255, 255, 0.05)',
+                black: '#000'
+            };
+
+            const particles = [];
+            const PARTICLE_COUNT = 50;
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    radius: Math.random() * 3 + 2, // Un poco más grandes
+                    angle: Math.random() * Math.PI * 2
+                });
+            }
+
+            const cardImages = {};
+            const promises = YEAR_SEQUENCE.map(card => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = card.imageSrc;
+                    img.onload = () => { cardImages[card.imageSrc] = img; resolve(); };
+                    img.onerror = () => { console.error(`Error al cargar la imagen local: ${card.imageSrc}`); resolve(); }
+                });
+            });
+            await Promise.all(promises);
+
+            // --- MODIFICACIÓN: Funciones para dibujar partículas estacionales ---
+            function drawSnowflake(p) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(0, p.radius);
+                    ctx.rotate(Math.PI / 3);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function drawFlower(p) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    ctx.arc(0, p.radius * 0.6, p.radius * 0.4, 0, Math.PI * 2);
+                    ctx.rotate(Math.PI * 2 / 5);
+                }
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function drawSun(p) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                for (let i = 0; i < 8; i++) {
+                    ctx.moveTo(0, p.radius * 0.7);
+                    ctx.lineTo(0, p.radius);
+                    ctx.rotate(Math.PI / 4);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function drawLeaf(p) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, p.radius * 0.7, p.radius, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.moveTo(0, -p.radius);
+                ctx.lineTo(0, p.radius);
+                ctx.stroke();
+                ctx.restore();
+            }
+            // --- FIN DE MODIFICACIÓN ---
+
+            function drawComicText(text, x, y, font, fillColor) {
+                ctx.font = font;
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = COLORS.black;
+                ctx.strokeText(text, x, y);
+                ctx.fillStyle = fillColor;
+                ctx.fillText(text, x, y);
+            }
+
+            function drawRoundedRect(x, y, width, height, radius, color) {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            function drawCard(imgSrc, x, y, width, height, yOffset = 0) {
+                const img = cardImages[imgSrc];
+                if (img && img.complete) {
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                    ctx.shadowBlur = 20;
+                    ctx.shadowOffsetX = 8;
+                    ctx.shadowOffsetY = 8;
+                    ctx.drawImage(img, x, y + yOffset, width, height);
+                    ctx.restore();
+                } else {
+                    ctx.strokeStyle = COLORS.neonPink;
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y + yOffset, width, height);
+                    ctx.fillStyle = COLORS.text;
+                    ctx.font = "16px 'Comic Neue'";
+                    ctx.textAlign = 'center';
+                    ctx.fillText("Falta imagen", x + width / 2, y + yOffset + height / 2);
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                animationFrame++;
+                
+                const now = new Date();
+                const guiñoteData = getGuiñoteDate(selectedDate);
+
+                // --- MODIFICACIÓN: Lógica para dibujar partículas estacionales ---
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.lineWidth = 1.5;
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.angle += p.vx * 0.05; // Rotación
+                    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                    switch (guiñoteData.seasonIndex) {
+                        case 0: // Invierno
+                            drawSnowflake(p);
+                            break;
+                        case 1: // Primavera
+                            drawFlower(p);
+                            break;
+                        case 2: // Verano
+                            drawSun(p);
+                            break;
+                        case 3: // Otoño
+                            drawLeaf(p);
+                            break;
+                        default: // Por si acaso
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                            ctx.fill();
+                    }
+                });
+                // --- FIN DE MODIFICACIÓN ---
+
+                drawRoundedRect(25, 25, 460, 600, 20, COLORS.panel);
+                drawRoundedRect(515, 25, 460, 600, 20, COLORS.panel);
+
+                const leftColX = 255;
+                ctx.textAlign = 'center';
+                
+                ctx.font = "bold 28px 'Comic Neue'";
+                ctx.fillStyle = COLORS.text;
+                ctx.fillText('Estamos en el año del', leftColX, 80);
+                
+                drawComicText(guiñoteData.yearInfo.name, leftColX, 140, "50px Bangers", COLORS.neonPink);
+                
+                const cardYOffset = Math.sin(animationFrame * 0.02) * 10;
+                drawCard(guiñoteData.yearInfo.imageSrc, leftColX - 100, 170, 200, 308, cardYOffset);
+                
+                ctx.font = "bold 22px 'Comic Neue'";
+                ctx.fillStyle = COLORS.neonBlue;
+                const periodoText = `Periodo de la baraja ${guiñoteData.periodo > 0 ? '+' : ''}${guiñoteData.periodo}`;
+                ctx.fillText(periodoText, leftColX, 515);
+
+                ctx.font = "18px 'Comic Neue'";
+                ctx.fillStyle = COLORS.text;
+                ctx.fillText('Progreso Anual', leftColX, 550);
+                
+                const yearProgress = guiñoteData.dayInGuiñoteYear / guiñoteData.totalDaysInYear;
+                drawRoundedRect(leftColX - 150, 570, 300, 20, 10, 'rgba(0,0,0,0.3)');
+                drawRoundedRect(leftColX - 150, 570, 300 * yearProgress, 20, 10, COLORS.neonPink);
+                
+                ctx.font = "bold 20px 'Comic Neue'";
+                ctx.fillStyle = '#fff';
+                ctx.fillText(`${(yearProgress * 100).toFixed(0)}%`, leftColX, 587);
+
+                const rightColX = 745;
+                
+                ctx.font = "bold 28px 'Comic Neue'";
+                ctx.fillStyle = COLORS.text;
+                ctx.fillText('Fecha Seleccionada', rightColX, 80);
+                
+                ctx.font = "22px 'Comic Neue'";
+                ctx.fillStyle = COLORS.neonBlue;
+                ctx.fillText(selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), rightColX, 115);
+                
+                ctx.font = "bold 40px 'Courier New', monospace";
+                ctx.fillStyle = COLORS.text;
+                ctx.fillText(now.toLocaleTimeString('es-ES'), rightColX, 165);
+                
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(550, 200);
+                ctx.lineTo(950, 200);
+                ctx.stroke();
+
+                ctx.font = "bold 28px 'Comic Neue'";
+                ctx.fillStyle = COLORS.text;
+                ctx.fillText('Hoy es el día', rightColX, 240);
+
+                drawComicText(guiñoteData.dayName, rightColX, 300, "40px Bangers", COLORS.neonPink);
+
+                if (guiñoteData.dayType === 'permutacion') {
+                    const card1ImgSrc = `images/${guiñoteData.card1.suit}_${guiñoteData.card1.number}.png`;
+                    const card2ImgSrc = `images/${guiñoteData.card2.suit}_${guiñoteData.card2.number}.png`;
+                    drawCard(card1ImgSrc, rightColX - 150, 330, 120, 185, cardYOffset);
+                    drawCard(card2ImgSrc, rightColX + 30, 330, 120, 185, cardYOffset);
+                } else {
+                    const suitSymbol = { copas: '🏆', oros: '💰', espadas: '⚔️', bastos: '🌿'}[guiñoteData.reinoSuit || guiñoteData.yearInfo.suit];
+                    const symbolToDraw = guiñoteData.dayType === 'coto' ? '🎲' : suitSymbol;
+                    drawComicText(symbolToDraw, rightColX, 450, "120px 'Comic Neue'", COLORS.neonPink);
+                }
+                
+                if (guiñoteData.reinoSuit) {
+                    ctx.font = "bold 22px 'Comic Neue'";
+                    ctx.fillStyle = COLORS.neonBlue;
+                    ctx.fillText(`Estamos en la estación de ${guiñoteData.reinoSuit.charAt(0).toUpperCase() + guiñoteData.reinoSuit.slice(1)}`, rightColX, 560);
+                }
+
+                requestAnimationFrame(draw);
+            }
+            
+            draw();
+        };
+    </script>
+</body>
+</html>
