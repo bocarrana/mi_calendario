@@ -25,7 +25,6 @@
             padding: 0;
         }
 
-        /* MODIFICACIÓN: Contenedor para el título y el logo */
         .title-container {
             display: flex;
             align-items: center;
@@ -41,15 +40,14 @@
             color: #e0218a; /* Neón Rosa */
             text-shadow: 0 0 10px rgba(224, 33, 138, 0.8), 3px 3px 0 #000;
             letter-spacing: 2px;
-            margin: 0; /* Quitamos el margen para un mejor ajuste */
+            margin: 0;
         }
 
         #title-logo {
-            height: 70px; /* Ajusta el tamaño del logo como necesites */
+            height: 70px;
             filter: drop-shadow(3px 3px 2px #000);
         }
 
-        /* --- ESTILOS PARA EL SELECTOR DE FECHA Y BOTÓN --- */
         .date-picker-container {
             margin-bottom: 15px;
             font-size: 1.2em;
@@ -76,7 +74,6 @@
             cursor: pointer;
         }
 
-        /* Estilo para los botones */
         .action-button {
             font-family: 'Bangers', cursive;
             font-size: 1.2em;
@@ -91,11 +88,10 @@
         .action-button:hover {
             transform: scale(1.05);
         }
-        /* --- FIN DE NUEVOS ESTILOS --- */
 
         canvas {
-            background-color: #16213e; /* Azul oscuro para el fondo del canvas */
-            border-radius: 20px; /* Bordes muy redondeados */
+            background-color: #16213e;
+            border-radius: 20px;
             box-shadow: 0 0 25px rgba(224, 33, 138, 0.3);
         }
     </style>
@@ -124,6 +120,18 @@
         const CARD_NAMES = {
             1: 'As', 2: 'Dos', 3: 'Tres', 4: 'Cuatro', 5: 'Cinco', 6: 'Seis', 7: 'Siete', 10: 'Sota', 11: 'Caballo', 12: 'Rey'
         };
+
+        // MODIFICACIÓN: Función para convertir números a romanos
+        function toRoman(num) {
+            const roman = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
+            let str = '';
+            for (let i of Object.keys(roman)) {
+                let q = Math.floor(num / roman[i]);
+                num -= q * roman[i];
+                str += i.repeat(q);
+            }
+            return str;
+        }
 
         function generateYearSequence() {
             const sequence = [];
@@ -168,12 +176,17 @@
             result.dayInGuiñoteYear = dayInGuiñoteYear;
             result.totalDaysInYear = totalDaysInYear;
 
-            // MODIFICACIÓN: Lógica para el día del aniversario
+            // MODIFICACIÓN: Lógica mejorada para el día del aniversario
             if (dayInGuiñoteYear === 1) {
                 result.dayType = 'aniversario';
-                const anniversaryNumber = yearIndex + 1;
-                result.dayName = `Día del ${anniversaryNumber}º Aniversario del Guiñote`;
-                result.seasonIndex = 3; 
+                result.seasonIndex = 3;
+                if (yearIndex === 0) {
+                    result.dayName = "Día de la Fundación de la Asociación Aragonesa de Guiñote";
+                } else if (yearIndex > 0) {
+                    result.dayName = `Día del ${toRoman(yearIndex)} Aniversario del Guiñote`;
+                } else { // yearIndex < 0
+                    result.dayName = `Año ${Math.abs(yearIndex)} antes de la Asociación de Guiñote`;
+                }
                 return result;
             }
             
@@ -184,8 +197,8 @@
                 return result;
             }
 
-            const dayAfterCuarenta = dayInGuiñoteYear - 1;
-            const reinoIndex = Math.floor((dayAfterCuarenta - 1) / 91);
+            const dayAfterAniversario = dayInGuiñoteYear - 1;
+            const reinoIndex = Math.floor((dayAfterAniversario - 1) / 91);
             result.seasonIndex = reinoIndex;
             
             const startSuitIndex = SUIT_ORDER.indexOf(result.yearInfo.suit);
@@ -196,7 +209,7 @@
                 SUIT_ORDER[(startSuitIndex + 0) % 4]
             ];
             result.reinoSuit = reinoSuitOrder[reinoIndex];
-            result.dayInReino = ((dayAfterCuarenta - 1) % 91) + 1;
+            result.dayInReino = ((dayAfterAniversario - 1) % 91) + 1;
 
             if (result.dayInReino === 91) {
                 result.dayType = 'veinte';
@@ -268,6 +281,7 @@
             const cardImages = {};
             const allImageSources = YEAR_SEQUENCE.map(card => card.imageSrc);
             SUIT_ORDER.forEach(suit => allImageSources.push(`images/cante_${suit}.png`));
+            allImageSources.push('images/logo.png');
 
             const promises = allImageSources.map(src => {
                 return new Promise((resolve) => {
@@ -279,61 +293,10 @@
             });
             await Promise.all(promises);
 
-            function drawSnowflake(p) {
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.angle);
-                ctx.beginPath();
-                for (let i = 0; i < 6; i++) {
-                    ctx.moveTo(0, 0);
-                    ctx.lineTo(0, p.radius);
-                    ctx.rotate(Math.PI / 3);
-                }
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            function drawFlower(p) {
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.angle);
-                ctx.beginPath();
-                for (let i = 0; i < 5; i++) {
-                    ctx.arc(0, p.radius * 0.6, p.radius * 0.4, 0, Math.PI * 2);
-                    ctx.rotate(Math.PI * 2 / 5);
-                }
-                ctx.fill();
-                ctx.restore();
-            }
-
-            function drawSun(p) {
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.angle);
-                ctx.beginPath();
-                ctx.arc(0, 0, p.radius * 0.6, 0, Math.PI * 2);
-                ctx.fill();
-                for (let i = 0; i < 8; i++) {
-                    ctx.moveTo(0, p.radius * 0.7);
-                    ctx.lineTo(0, p.radius);
-                    ctx.rotate(Math.PI / 4);
-                }
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            function drawLeaf(p) {
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.angle);
-                ctx.beginPath();
-                ctx.ellipse(0, 0, p.radius * 0.7, p.radius, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.moveTo(0, -p.radius);
-                ctx.lineTo(0, p.radius);
-                ctx.stroke();
-                ctx.restore();
-            }
+            function drawSnowflake(p) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); ctx.beginPath(); for (let i = 0; i < 6; i++) { ctx.moveTo(0, 0); ctx.lineTo(0, p.radius); ctx.rotate(Math.PI / 3); } ctx.stroke(); ctx.restore(); }
+            function drawFlower(p) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); ctx.beginPath(); for (let i = 0; i < 5; i++) { ctx.arc(0, p.radius * 0.6, p.radius * 0.4, 0, Math.PI * 2); ctx.rotate(Math.PI * 2 / 5); } ctx.fill(); ctx.restore(); }
+            function drawSun(p) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); ctx.beginPath(); ctx.arc(0, 0, p.radius * 0.6, 0, Math.PI * 2); ctx.fill(); for (let i = 0; i < 8; i++) { ctx.moveTo(0, p.radius * 0.7); ctx.lineTo(0, p.radius); ctx.rotate(Math.PI / 4); } ctx.stroke(); ctx.restore(); }
+            function drawLeaf(p) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); ctx.beginPath(); ctx.ellipse(0, 0, p.radius * 0.7, p.radius, 0, 0, Math.PI * 2); ctx.fill(); ctx.moveTo(0, -p.radius); ctx.lineTo(0, p.radius); ctx.stroke(); ctx.restore(); }
 
             function drawComicText(text, x, y, font, fillColor) {
                 ctx.font = font;
@@ -343,6 +306,24 @@
                 ctx.strokeText(text, x, y);
                 ctx.fillStyle = fillColor;
                 ctx.fillText(text, x, y);
+            }
+
+            // MODIFICACIÓN: Nueva función para autoajustar el texto
+            function drawFittedComicText(text, x, y, initialFont, maxWidth, fillColor) {
+                const fontParts = initialFont.split(' ');
+                const initialSize = parseInt(fontParts[0]);
+                const fontFamily = fontParts.slice(1).join(' ');
+                
+                let currentSize = initialSize;
+                ctx.font = `${currentSize}px ${fontFamily}`;
+
+                // Reduce el tamaño de la fuente hasta que el texto quepa
+                while (ctx.measureText(text).width > maxWidth && currentSize > 10) {
+                    currentSize--;
+                    ctx.font = `${currentSize}px ${fontFamily}`;
+                }
+                
+                drawComicText(text, x, y, ctx.font, fillColor);
             }
 
             function drawRoundedRect(x, y, width, height, radius, color) {
@@ -468,7 +449,8 @@
                 ctx.fillStyle = COLORS.text;
                 ctx.fillText('Hoy es el día', rightColX, 240);
 
-                drawComicText(guiñoteData.dayName, rightColX, 300, "40px Bangers", COLORS.neonPink);
+                // MODIFICACIÓN: Se usa la función de texto autoajustable
+                drawFittedComicText(guiñoteData.dayName, rightColX, 300, "40px Bangers", 440, COLORS.neonPink);
 
                 if (guiñoteData.dayType === 'permutacion') {
                     const card1ImgSrc = `images/${guiñoteData.card1.suit}_${guiñoteData.card1.number}.png`;
